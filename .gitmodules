@@ -1,0 +1,4 @@
+[submodule "external/torchani"]
+	path = external/torchani
+	url = git@github.com:roitberg-group/torchani_sandbox.git
+	branch = easier_aev_init
