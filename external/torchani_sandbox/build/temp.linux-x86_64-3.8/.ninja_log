@@ -1,5 +1,0 @@
-# ninja log v5
-0	22340	1654724699317691098	/home/mdarrows/repos/torchani_sandbox/build/temp.linux-x86_64-3.8/torchani/csrc/cuaev.o	5d633b0476f70fac
-4	23526	1654724873018693902	/home/mdarrows/repos/torchani_sandbox/build/temp.linux-x86_64-3.8/torchani/csrc/cuaev.o	93cb144357ee2464
-4	152712	1654725002192610273	/home/mdarrows/repos/torchani_sandbox/build/temp.linux-x86_64-3.8/torchani/csrc/aev.o	5e9d2aa1e80bfabc
-0	22626	1654725025392246611	/home/mdarrows/repos/torchani_sandbox/build/temp.linux-x86_64-3.8/torchani/csrc/mnp.o	25d7959e0eebb8af
