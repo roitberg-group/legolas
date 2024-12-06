@@ -1,0 +1,2 @@
+[console_scripts]
+torchani = torchani.cli:main
