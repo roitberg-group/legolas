@@ -1,3 +1,0 @@
-[submodule "external/torchani_sandbox"]
-	path = external/torchani_sandbox
-	url = git@github.com:roitberg-group/torchani_sandbox.git
