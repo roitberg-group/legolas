@@ -1,0 +1,3 @@
+[submodule "torchani_sandbox"]
+	path = torchani_sandbox
+	url = git@github.com:roitberg-group/torchani_sandbox.git
