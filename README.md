@@ -24,9 +24,9 @@ conda activate legolas
 ```
 Versions when installing using conda:
 
-- python 3.8
-- cuda 11.3
-- pytorch 1.12.1
+- python 3.10
+- cuda 11.8
+- pytorch 2.5.1
 
 ## Usage
 
