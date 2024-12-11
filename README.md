@@ -29,11 +29,12 @@ Versions when installing using conda:
 - pytorch 2.5.1
 
 3. Install TorchANI:
-Procedure from: [TorchANI Installation](external/torchani_sandbox/README.md)
-
-LEGOLAS is most efficient when run using the torchani compiled cuAEV extension, but it is not required.
 
 **Within `external/torchani_sandbox`:**
+
+Procedure from [TorchANI Installation](external/torchani_sandbox/README.md)
+
+LEGOLAS is most efficient when run using the torchani compiled cuAEV extension, but it is not required.
 
 You have two options, depending on whether you want to install the torchani compiled extensions. To install torchani with no compiled extensions run:
 
