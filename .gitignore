@@ -1,3 +1,6 @@
 *.slurm.sh
 *.out
 *.error
+*.csv
+*.parquet
+__pycache__/
