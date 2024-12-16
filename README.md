@@ -52,24 +52,6 @@ flag if you want an editable install (for developers). The `-v` flag can of
 course be omitted, but it is sometimes handy to have some extra information
 about the installation process.
 
-After this you can perform some optional steps if you installed the required
-dev dependencies:
-
-```bash
-# Download files needed for testing and building the docs (optional)
-bash ./download.sh
-
-# Build the documentation (optional)
-sphinx-build docs/src docs/build
-
-# Manually run unit tests (optional)
-cd ./tests
-pytest -v .
-```
-
-This process works for most use cases, but for more details regarding building
-the CUDA and C++ extensions refer to [TorchANI CSRC](external/torchani_sandbox/torchani/csrc).
-
 ## Usage
 
 ### To run LEGOLAS, use the following command:
