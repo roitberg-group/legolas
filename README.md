@@ -30,9 +30,7 @@ Versions when installing using conda:
 
 3. Install TorchANI:
 
-**Within `external/torchani_sandbox`:**
-
-Procedure from [TorchANI Installation](external/torchani_sandbox/README.md)
+**Within `external/internal-legolas-aev`:**
 
 LEGOLAS is most efficient when run using the torchani compiled cuAEV extension, but it is not required.
 
@@ -83,13 +81,13 @@ python legolas.py {coordinates_file(s)} [-b {BATCH_SIZE}] [-atype {INTERESTED_AT
 ### Examples:
 ```bash
 # All atom types:
-python legolas.py data/304temp.pdb
+python legolas.py data/A001_1KF3A.pdbH
 
 # Specfy atom types:
-python legolas.py data/304temp.pdb -atype H,C,N
+python legolas.py data/A001_1KF3A.pdbH -atype H,C,N
 
 # Run on molecular dynamics trajectory:
-python legolas.py data/304_BBL.nc -t data/304_BBL.parm7
+python legolas.py data/{trajectory_file}.nc -t data/{topology_file}.parm7
 ```
 
 ## Contributing
