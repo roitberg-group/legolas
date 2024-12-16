@@ -1,6 +1,3 @@
-[submodule "torchani_sandbox"]
-	path = external/torchani_sandbox
-	url = git@github.com:roitberg-group/torchani_sandbox.git
-[submodule "external/torchani_sandbox"]
-	path = external/torchani_sandbox
-	url = git@github.com:roitberg-group/torchani_sandbox.git
+[submodule "external/internal-legolas-aev"]
+	path = external/internal-legolas-aev
+	url = https://github.com/roitberg-group/internal-legolas-aev.git
