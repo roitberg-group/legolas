@@ -11,9 +11,9 @@ A fast and accurate machine learning model built on PyTorch for predicting prote
 - [Citation](#citation)
 
 ## Installation
-1. Clone the repository:
+1. Clone the repository using `--recursive` to include the required submodule:
 ```bash
- git clone https://github.com/mdarrows/legolas.git
+ git clone --recursive https://github.com/mdarrows/legolas.git
  cd legolas
 ```
 2. Set up a conda environment:
