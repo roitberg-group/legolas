@@ -4,3 +4,5 @@
 *.csv
 *.parquet
 __pycache__/
+decoy_dataset/
+PDB-testset-addHydrogens/
