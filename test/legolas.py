@@ -12,18 +12,11 @@ import mdtraj as md
 from pathlib import Path
 from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
-from torchani.aev import StandardRadial, StandardAngular
 from functions import NMR, ens_means, ens_stdevs
 from typing import List, Optional
+from torchani.aev import AEVComputer, ANIAngular, ANIRadial
 
 NUM_MODELS = 5
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if device == 'cuda':
-    use_cuda = True
-else:
-    use_cuda = False
-
 
 class EntryPDB:
     """
@@ -49,7 +42,7 @@ class EntryPDB:
         self.unsupported = False
         self.indices = collections.defaultdict(lambda: [])
         self.str2int = torchani.utils.ChemicalSymbolsToInts(
-            "".join(self.SUPPORTED_SPECIES)
+            self.SUPPORTED_SPECIES
         )
         resname_dict = self.get_resname_dict()
 
@@ -110,7 +103,6 @@ class EntryPDB:
 
     def to(self, device):
         """Move tensors to the specified device"""
-        self.seq_id = torch.tensor(self.seq_id).to(device)
         self.chemical_shifts = self.chemical_shifts.to(device)
         self.coordinates = self.coordinates.to(device)
         self.res_idx = self.res_idx.to(device)
@@ -137,7 +129,7 @@ class EntryMdtraj(EntryPDB):
         self.unsupported = False
         self.indices = collections.defaultdict(lambda: [])
         self.str2int = torchani.utils.ChemicalSymbolsToInts(
-            "".join(self.SUPPORTED_SPECIES)
+            self.SUPPORTED_SPECIES
         )
         resname_dict = self.get_resname_dict()
 #        print(resname_dict)
@@ -145,8 +137,7 @@ class EntryMdtraj(EntryPDB):
         for i, atom in enumerate(trajectory.topology.atoms):
             element = self.convert_element(atom.element.symbol)
 
-            #self.seq_id.append(atom.residue.resSeq) #past
-            self.seq_id = [atom.residue.resSeq for atom in trajectory.topology.atoms] #new
+            self.seq_id.append(atom.residue.resSeq)
 
             atype = re.sub(r"\d", "", atom.name)
             self.atypes.append(atype)
@@ -168,8 +159,6 @@ class EntryMdtraj(EntryPDB):
             self.coordinates.append(trajectory.xyz[:, i, :])
 
         # Convert the species and coordinates lists to tensors
-        self.seq_id = torch.tensor(self.seq_id, dtype=torch.long)
-
         self.chemical_shifts = torch.tensor(self.chemical_shifts)
         self.coordinates = torch.tensor(self.coordinates, dtype=torch.float32)
         self.coordinates = torch.transpose(self.coordinates, 0, 1).contiguous() # fix formatting issue
@@ -199,15 +188,14 @@ class ChemicalShiftPredictor(torch.nn.Module):
         # Load all models for different atom types
         self.models = self._load_models(model_paths)
 
-        # Initialize Atomic Environment Vectors (AEVs) Computer
-        radial_terms = StandardRadial.like_2x()
-        angular_terms = StandardAngular.like_2x()
-        self.aev_computer = torchani.AEVComputer(
-            angular_terms=angular_terms,
-            radial_terms=radial_terms,
+        radial_terms = ANIRadial.like_2x()
+        angular_terms = ANIAngular.like_2x()
+        self.aev_computer = AEVComputer(
+            angular=angular_terms,
+            radial=radial_terms,
             num_species=5,
-            use_cuda_extension=use_cuda,
-            neighborlist='cell_list'
+            strategy="cuaev",
+            neighborlist='cell_list' #del if too slow #use_cuaev_interface=True was present bfore this
         )
 
         # Mean and Standard Deviation values for normalizing the output
@@ -281,7 +269,6 @@ class ChemicalShiftPredictor(torch.nn.Module):
                 [batch[atype+'_std'] for batch in cs_all_batches], dim=0
             )  # [num_frames, num_atoms]
             res_idx_atype = entry.res_idx.index_select(0, entry.indices[atype])
-            seq_id_atype = torch.tensor(entry.seq_id).index_select(0, entry.indices[atype]) #new
 
             # Adjust for a single frame
             if num_frames == 1:
@@ -298,7 +285,6 @@ class ChemicalShiftPredictor(torch.nn.Module):
             # Create DataFrame for current atom type and append to df_all
             data = {
                 "ATOM_TYPE": [atype] * len(res_idx_atype),
-                "SEQ_ID": seq_id_atype.flatten().tolist(),
                 "RESIDUE_ID": res_idx_atype.flatten().tolist(),
                 "CHEMICAL_SHIFT": cs_all_frames_atype.tolist(),
                 "CHEMICAL_SHIFT_STD": cs_std_all_frames_atype.tolist()
@@ -319,8 +305,8 @@ class ChemicalShiftPredictor(torch.nn.Module):
         # Create batch of AEVs
         aevs_all = []
         for j in range(start, end):
-            _, aevs = self.aev_computer(
-                (entry.species.unsqueeze(0), entry.coordinates[j].unsqueeze(0))
+            aevs = self.aev_computer(
+                entry.species.unsqueeze(0), entry.coordinates[j].unsqueeze(0)
             )
             aevs_all.append(aevs)
         aevs_all = torch.cat(aevs_all, 0)
@@ -440,23 +426,20 @@ if __name__ == "__main__":
             entry = load_and_validate_file(input_file, PDB=True)
         elif file_extension.lower() == '.nc':
             if args.topology is None:
-                raise ValueError(
-                    "Topology file is required for trajectory files")
-            entry = load_and_validate_file(
-                input_file, topology=args.topology, TRAJECTORY=True)
+                raise ValueError("Topology file is required for trajectory files")
+            entry = load_and_validate_file(input_file, topology=args.topology, TRAJECTORY=True)
 
         # Run LEGOLAS
-        entry = entry.to(device)
-        model = ChemicalShiftPredictor(model_paths).to(device)
+        entry = entry.to("cuda")
+        model = ChemicalShiftPredictor(model_paths).to("cuda")
         df = model(entry, args.batch_size)
         print(df)
 
         # Save to CSV and Parquet
-#        csv_file = Path(input_file).stem + "_cs.csv"
-#        df.to_csv(csv_file)
-#        print(f"Saved to {csv_file}")
+        csv_file = Path(input_file).stem + "_cs.csv"
+        df.to_csv(csv_file)
+        print(f"Saved to {csv_file}")
 
-#        parquet_file = Path(input_file).stem + "_cs.parquet"
-#        df.to_parquet(parquet_file)
-#        print(f"Saved to {parquet_file}")
-
+        parquet_file = Path(input_file).stem + "_cs.parquet"
+        df.to_parquet(parquet_file)
+        print(f"Saved to {parquet_file}")
