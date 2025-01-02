@@ -433,7 +433,7 @@ if __name__ == "__main__":
 
         # Run LEGOLAS
         entry = entry.to(device)
-        model = ChemicalShiftPredictor(model_paths).to("device")
+        model = ChemicalShiftPredictor(model_paths).to(device)
         df = model(entry, args.batch_size)
         print(df)
 
