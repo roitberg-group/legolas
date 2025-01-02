@@ -18,6 +18,8 @@ from torchani.aev import AEVComputer, ANIAngular, ANIRadial
 
 NUM_MODELS = 5
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class EntryPDB:
     """
     Class to hold the molecular data for one PDB.
@@ -194,8 +196,8 @@ class ChemicalShiftPredictor(torch.nn.Module):
             angular=angular_terms,
             radial=radial_terms,
             num_species=5,
-            strategy="cuaev",
-            neighborlist='cell_list' #del if too slow #use_cuaev_interface=True was present bfore this
+            strategy="auto", #selects "cuaev" if CudaAEV extensions are available, pyaev if not
+            neighborlist='cell_list' #del if too slow #could try use_cuaev_interface=True above
         )
 
         # Mean and Standard Deviation values for normalizing the output
@@ -430,8 +432,8 @@ if __name__ == "__main__":
             entry = load_and_validate_file(input_file, topology=args.topology, TRAJECTORY=True)
 
         # Run LEGOLAS
-        entry = entry.to("cuda")
-        model = ChemicalShiftPredictor(model_paths).to("cuda")
+        entry = entry.to(device)
+        model = ChemicalShiftPredictor(model_paths).to("device")
         df = model(entry, args.batch_size)
         print(df)
 
