@@ -412,11 +412,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
     interested_atypes = args.interested_atypes
 
+    # Get the directory where models reside
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+
+    # Define paths relative to the script's directory
     model_paths = {}
     for atype in interested_atypes:
         model_paths[atype] = [
-            f"./ens_models/ens_model_{i+1}_{atype}.pt" for i in range(NUM_MODELS)
+            os.path.join(script_dir, "ens_models", f"ens_model_{i+1}_{atype}.pt") for i in range(NUM_MODELS)
         ]
+
+#    model_paths = {}
+#    for atype in interested_atypes:
+#        model_paths[atype] = [
+#            f"./ens_models/ens_model_{i+1}_{atype}.pt" for i in range(NUM_MODELS)
+#        ]
 
 # Can accept single or multiple files
     for input_file in args.input_files:
