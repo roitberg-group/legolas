@@ -72,6 +72,15 @@ python legolas.py data/A001_1KF3A.pdbH -atype H,C,N
 python legolas.py data/{trajectory_file}.nc -t data/{topology_file}.parm7
 ```
 
+### Expected `.csv` Output
+| Column Name          | Description |
+|-----------------------|-------------|
+| `ATOM_TYPE`           | Atom type: N, CA, CB, C, HA, H |
+| `SEQ_ID`              | Residue sequence number |
+| `RES_TYPE`            | Three-letter code for the 20 standard amino acids |
+| `CHEMICAL_SHIFT`      | Predicted chemical shift (average over 5 models) |
+| `CHEMICAL_SHIFT_STD`  | Standard deviation across 5 models (lower std = higher confidence)
+
 ## Contributing
 
 If you find a bug or have some feature request, please feel free to open an issue on GitHub or send us a pull request.
