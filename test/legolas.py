@@ -46,7 +46,9 @@ class EntryPDB:
         self.str2int = torchani.utils.ChemicalSymbolsToInts(
             self.SUPPORTED_SPECIES
         )
-        resname_dict = self.get_resname_dict()
+        #resname_dict = self.get_resname_dict()
+        resname_dict, id_to_resname = self.get_resname_dict()
+        self.id_to_resname = id_to_resname
 
         i = 0
         for atom in structure.get_atoms():
@@ -101,7 +103,10 @@ class EntryPDB:
     def get_resname_dict():
         string = '''ala arg asn asp cys glu gln gly his ile leu lys met phe pro ser thr trp tyr val hoh dod'''.split()
         otherlist = [item.upper() for item in string]
-        return {name: j for j, name in enumerate(otherlist)}
+        name_to_id = {name: j for j, name in enumerate(otherlist)}
+        id_to_name = {j: name for name, j in name_to_id.items()}
+        return name_to_id, id_to_name
+        #return {name: j for j, name in enumerate(otherlist)}
 
     def to(self, device):
         """Move tensors to the specified device"""
@@ -134,8 +139,9 @@ class EntryMdtraj(EntryPDB):
         self.str2int = torchani.utils.ChemicalSymbolsToInts(
             self.SUPPORTED_SPECIES
         )
-        resname_dict = self.get_resname_dict()
-#        print(resname_dict)
+#        resname_dict = self.get_resname_dict()
+        resname_dict, id_to_resname = self.get_resname_dict()
+        self.id_to_resname = id_to_resname
 
         for i, atom in enumerate(trajectory.topology.atoms):
             element = self.convert_element(atom.element.symbol)
@@ -291,7 +297,7 @@ class ChemicalShiftPredictor(torch.nn.Module):
             data = {
                 "ATOM_TYPE": [atype] * len(res_idx_atype),
                 "SEQ_ID": seq_id_atype.flatten().tolist(),
-                "RESIDUE_ID": res_idx_atype.flatten().tolist(),
+                "RES_TYPE": [entry.id_to_resname[r.item()] for r in res_idx_atype.flatten()],
                 "CHEMICAL_SHIFT": cs_all_frames_atype.tolist(),
                 "CHEMICAL_SHIFT_STD": cs_std_all_frames_atype.tolist()
             }
