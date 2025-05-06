@@ -105,6 +105,7 @@ class EntryPDB:
 
     def to(self, device):
         """Move tensors to the specified device"""
+        self.seq_id = torch.tensor(self.seq_id).to(device)
         self.chemical_shifts = self.chemical_shifts.to(device)
         self.coordinates = self.coordinates.to(device)
         self.res_idx = self.res_idx.to(device)
@@ -139,7 +140,7 @@ class EntryMdtraj(EntryPDB):
         for i, atom in enumerate(trajectory.topology.atoms):
             element = self.convert_element(atom.element.symbol)
 
-            self.seq_id.append(atom.residue.resSeq)
+            self.seq_id = [atom.residue.resSeq for atom in trajectory.topology.atoms]
 
             atype = re.sub(r"\d", "", atom.name)
             self.atypes.append(atype)
@@ -161,6 +162,7 @@ class EntryMdtraj(EntryPDB):
             self.coordinates.append(trajectory.xyz[:, i, :])
 
         # Convert the species and coordinates lists to tensors
+        self.seq_id = torch.tensor(self.seq_id, dtype=torch.long)
         self.chemical_shifts = torch.tensor(self.chemical_shifts)
         self.coordinates = torch.tensor(self.coordinates, dtype=torch.float32)
         self.coordinates = torch.transpose(self.coordinates, 0, 1).contiguous() # fix formatting issue
@@ -271,6 +273,7 @@ class ChemicalShiftPredictor(torch.nn.Module):
                 [batch[atype+'_std'] for batch in cs_all_batches], dim=0
             )  # [num_frames, num_atoms]
             res_idx_atype = entry.res_idx.index_select(0, entry.indices[atype])
+            seq_id_atype = torch.tensor(entry.seq_id).index_select(0, entry.indices[atype])
 
             # Adjust for a single frame
             if num_frames == 1:
@@ -287,6 +290,7 @@ class ChemicalShiftPredictor(torch.nn.Module):
             # Create DataFrame for current atom type and append to df_all
             data = {
                 "ATOM_TYPE": [atype] * len(res_idx_atype),
+                "SEQ_ID": seq_id_atype.flatten().tolist(),
                 "RESIDUE_ID": res_idx_atype.flatten().tolist(),
                 "CHEMICAL_SHIFT": cs_all_frames_atype.tolist(),
                 "CHEMICAL_SHIFT_STD": cs_std_all_frames_atype.tolist()
