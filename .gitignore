@@ -1,8 +1,6 @@
 *.slurm.sh
 *.out
 *.error
-*.csv
-*.parquet
 __pycache__/
 test/data/decoy_dataset/
 test/data/shiftx2_dataset/
