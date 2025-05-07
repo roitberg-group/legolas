@@ -413,12 +413,62 @@ def parse_atypes(value):
     # Return the atom types as a list of lists
     return atypes
 
+def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
+    """
+    Writes a new PDB file with chemical shifts replacing the B-factor column.
+    Non-predicted atoms will have 'NA' instead of the B-factor.
+    """
+    # Build lookup dictionary: (SEQ_ID, ATOM_TYPE) -> chemical_shift
+    lookup = {}
+    for _, row in df.iterrows():
+        key = (row["SEQ_ID"], row["ATOM_TYPE"].strip())
+        lookup[key] = row["CHEMICAL_SHIFT"]
+
+    with open(input_pdb_path, 'r') as f_in, open(output_pdbcs_path, 'w') as f_out:
+        for line in f_in:
+            if line.startswith("ATOM"):
+                atom_name = line[12:16].strip()
+                res_seq = int(line[22:26].strip())
+
+                # Special GLY handling: treat HA2/HA3 like HA
+                if atom_name in ["HA2", "HA3"]:
+                    match_atom_name = "HA"
+                else:
+                    match_atom_name = atom_name
+
+                key = (res_seq, match_atom_name)
+
+                # Specify precision based on atom type (1 decimal for N, CA, CB, C; 2 decimals for H, HA)
+                # If the atom type is not in the lookup, set cs_str to "  NA  "
+                if key in lookup:
+                    cs_value = lookup[key]
+                    if match_atom_name in ["N", "CA", "CB", "C"]:
+                        cs_str = f"{cs_value:6.1f}"
+                    elif match_atom_name in ["H", "HA"]:
+                        cs_str = f"{cs_value:6.2f}"
+                    else:
+                        cs_str = f"{cs_value:6.1f}"
+                else:
+                    cs_str = "  NA  "
+
+                new_line = line[:60] + cs_str + line[66:]
+                f_out.write(new_line)
+
+            elif line.startswith("ANISOU"):
+                # Skip ANISOU lines
+                continue
+
+            else:
+                f_out.write(line)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input_files", nargs='+', help="Path to input file(s), could be a PDB or netcdf trajectory file")
     parser.add_argument("-t", "--topology", default=None)
     parser.add_argument("-b", "--batch_size", default=10, type=int) # you could change the batch size to fit your GPU memory
     parser.add_argument("-atype", "--interested_atypes", default=["H", "CA", "CB", "C", "N", "HA"], type=parse_atypes, help="Interested atom types, the atypes should be separated by comma, for example H,HA")
+    parser.add_argument("-o", "--output", choices=["csv", "parquet", "pdbcs", "all"], default="all", help="Output file format: csv, parquet, pdbcs, or all (default)")
     args = parser.parse_args()
     interested_atypes = args.interested_atypes
 
@@ -457,11 +507,30 @@ if __name__ == "__main__":
         df = model(entry, args.batch_size)
         print(df)
 
-        # Save to CSV and Parquet
-        csv_file = Path(input_file).stem + "_cs.csv"
-        df.to_csv(csv_file)
-        print(f"Saved to {csv_file}")
+        stem = Path(input_file).stem
 
-        parquet_file = Path(input_file).stem + "_cs.parquet"
-        df.to_parquet(parquet_file)
-        print(f"Saved to {parquet_file}")
+       # Save to CSV, Parquet, PDB
+        if args.output in ["csv", "all"]:
+            csv_file = stem + "_cs.csv"
+            df.to_csv(csv_file, index=False)
+            print(f"Saved to {csv_file}")
+
+        if args.output in ["parquet", "all"]:
+            parquet_file = stem + "_cs.parquet"
+            df.to_parquet(parquet_file, index=False)
+            print(f"Saved to {parquet_file}")
+
+        if args.output in ["pdbcs", "all"] and file_extension.lower().startswith('.pdb'):
+            pdbcs_file = stem + "_cs.pdb"
+            write_pdbCS(input_file, df, pdbcs_file)
+            print(f"Saved to {pdbcs_file}")
+
+
+        # Save to CSV and Parquet
+        #csv_file = Path(input_file).stem + "_cs.csv"
+        #df.to_csv(csv_file)
+        #print(f"Saved to {csv_file}")
+
+        #parquet_file = Path(input_file).stem + "_cs.parquet"
+        #df.to_parquet(parquet_file)
+        #print(f"Saved to {parquet_file}")
