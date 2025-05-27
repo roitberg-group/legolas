@@ -93,3 +93,9 @@ This project is licensed under the [MIT License](LICENSE).
 Please cite the following paper if you use LEGOLAS:
 
 Mikayla Y. Darrows, Dimuthu Kodituwakku, Jinze Xue, Ignacio Pickering, Nicholas S. Terrel, Adrian E. Roitberg. LEGOLAS: a Machine Learning method for rapid and accurate predictions of protein NMR chemical shifts.
+
+
+J. Chem. Theory Comput. 2025, 21, 8, 4266–4275
+
+
+https://doi.org/10.1021/acs.jctc.5c00026
