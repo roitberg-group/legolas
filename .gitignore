@@ -1,6 +1,8 @@
+cpu_env_numpy2.yaml
 *.slurm.sh
 *.out
 *.error
 __pycache__/
 test/data/decoy_dataset/
 test/data/shiftx2_dataset/
+test/data/A001_1KF3A_lessB.pdbH
