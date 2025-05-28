@@ -417,6 +417,8 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
     """
     Writes a new PDB file with chemical shifts replacing the B-factor column.
     Non-predicted atoms will have 'NA' instead of the B-factor.
+    PDB files use fixed-width columns, so we limit decimal precision to avoid misalignment
+    So, 13C and 15N shifts use only 1 decimal places, while 1H use 2 decimal places
     """
     # Build lookup dictionary: (SEQ_ID, ATOM_TYPE) -> chemical_shift
     lookup = {}
@@ -472,23 +474,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     interested_atypes = args.interested_atypes
 
-    # Get the directory where models reside
+    # Call 5 models
     script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    # Define paths relative to the script's directory
     model_paths = {}
     for atype in interested_atypes:
         model_paths[atype] = [
             os.path.join(script_dir, "ens_models", f"ens_model_{i+1}_{atype}.pt") for i in range(NUM_MODELS)
         ]
 
-#    model_paths = {}
-#    for atype in interested_atypes:
-#        model_paths[atype] = [
-#            f"./ens_models/ens_model_{i+1}_{atype}.pt" for i in range(NUM_MODELS)
-#        ]
-
-# Can accept single or multiple files
+    # Can accept single or multiple files
     for input_file in args.input_files:
         # Get the file extension
         _, file_extension = os.path.splitext(input_file)
@@ -505,11 +499,12 @@ if __name__ == "__main__":
         entry = entry.to(device)
         model = ChemicalShiftPredictor(model_paths).to(device)
         df = model(entry, args.batch_size)
+        df = df.sort_values(by=["SEQ_ID", "ATOM_TYPE"]).reset_index(drop=True)
         print(df)
 
         stem = Path(input_file).stem
 
-       # Save to CSV, Parquet, PDB
+        # Save to CSV, Parquet, PDB
         if args.output in ["csv", "all"]:
             csv_file = stem + "_cs.csv"
             df.to_csv(csv_file, index=False)
@@ -525,12 +520,3 @@ if __name__ == "__main__":
             write_pdbCS(input_file, df, pdbcs_file)
             print(f"Saved to {pdbcs_file}")
 
-
-        # Save to CSV and Parquet
-        #csv_file = Path(input_file).stem + "_cs.csv"
-        #df.to_csv(csv_file)
-        #print(f"Saved to {csv_file}")
-
-        #parquet_file = Path(input_file).stem + "_cs.parquet"
-        #df.to_parquet(parquet_file)
-        #print(f"Saved to {parquet_file}")
