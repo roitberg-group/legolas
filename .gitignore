@@ -6,3 +6,5 @@ __pycache__/
 test/data/decoy_dataset/
 test/data/shiftx2_dataset/
 test/data/A001_1KF3A_lessB.pdbH
+ens_models_weights/
+resave_nmr_weights.py
