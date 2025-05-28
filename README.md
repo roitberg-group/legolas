@@ -57,7 +57,7 @@ about the installation process.
 ### To run LEGOLAS, use the following command:
 ```bash
 # atypes = HA, H, CA, CB, C, N
-python legolas.py {coordinates_file(s)} [-b {BATCH_SIZE}] [-atype {INTERESTED_ATYPES}] [-t {TOPOLOGY}]
+python legolas.py {coordinates_file(s)} [-b {BATCH_SIZE}] [-atype {INTERESTED_ATYPES}] [-t {TOPOLOGY}] [-o {OUTPUT_FILETYPE}]
 ```
 
 ### Examples:
@@ -70,6 +70,10 @@ python legolas.py data/A001_1KF3A.pdbH -atype H,C,N
 
 # Run on molecular dynamics trajectory:
 python legolas.py data/{trajectory_file}.nc -t data/{topology_file}.parm7
+
+# Specify output file type ("csv", "parquet", "pdbcs", "all", default=all)
+# pdbcs output file type is only available for PDB inputs (not trajectories)
+python legolas.py data/A001_1KF3A.pdbH -o csv,pdbcs
 ```
 
 ### Expected `.csv` Output
