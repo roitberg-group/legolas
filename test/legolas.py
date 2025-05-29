@@ -217,9 +217,17 @@ class ChemicalShiftPredictor(torch.nn.Module):
         # Create a dictionary to store all models by atom type
         models = {}
         for atom_type, paths in model_paths.items():
-            models[atom_type] = torch.nn.ModuleList(
-                [torch.load(path, map_location="cpu") for path in paths]
-            )
+            modules = []
+            for path in paths:
+                state = torch.load(path, map_location="cpu", weights_only=True)
+
+                emb_dim = state["layer0.weight"].shape[1] # set embedding dimension to first layer
+                m = NMR(embedding=emb_dim)
+                m.load_state_dict(state)
+                m.eval()
+                modules.append(m)
+
+            models[atom_type] = torch.nn.ModuleList(modules)
         return torch.nn.ModuleDict(models)
 
     def forward(self, entry, batch_size=100):
@@ -232,9 +240,6 @@ class ChemicalShiftPredictor(torch.nn.Module):
         Returns:
             df_all: DataFrame of predicted chemical shifts for all atom types
         """
-        # Timing
-#        torch.cuda.synchronize()
-#        initial_time = time.time()
         assert (
             entry.species.dim() == 1
         ), "Species should be only for a single frame even it's a trajectory."
@@ -493,6 +498,7 @@ if __name__ == "__main__":
         model_paths[atype] = [
             os.path.join(script_dir, "ens_models", f"ens_model_{i+1}_{atype}.pt") for i in range(NUM_MODELS)
         ]
+
 
     # Can accept single or multiple files
     for input_file in args.input_files:
