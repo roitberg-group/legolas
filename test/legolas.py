@@ -413,6 +413,7 @@ def parse_atypes(value):
     # Return the atom types as a list of lists
     return atypes
 
+
 def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
     """
     Writes a new PDB file with chemical shifts replacing the B-factor column.
@@ -420,11 +421,16 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
     PDB files use fixed-width columns, so we limit decimal precision to avoid misalignment
     So, 13C and 15N shifts use only 1 decimal places, while 1H use 2 decimal places
     """
-    # Build lookup dictionary: (SEQ_ID, ATOM_TYPE) -> chemical_shift
-    lookup = {}
+    # Group all chemical shifts per (SEQ_ID, ATOM_TYPE)
+    shift_lookup = collections.defaultdict(lambda: collections.defaultdict(list))  # shift_lookup[seq_id][atype] = list of shifts
+
     for _, row in df.iterrows():
-        key = (row["SEQ_ID"], row["ATOM_TYPE"].strip())
-        lookup[key] = row["CHEMICAL_SHIFT"]
+        seq_id = row["SEQ_ID"]
+        atype = row["ATOM_TYPE"].strip()
+        shift_lookup[seq_id][atype].append(row["CHEMICAL_SHIFT"])
+
+    # Track how many of each ATOM_TYPE we've assigned per residue
+    assigned_counts = collections.defaultdict(lambda: collections.defaultdict(int))
 
     with open(input_pdb_path, 'r') as f_in, open(output_pdbcs_path, 'w') as f_out:
         for line in f_in:
@@ -433,20 +439,27 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
                 res_seq = int(line[22:26].strip())
 
                 # Special GLY handling: treat HA2/HA3 like HA
-                if atom_name in ["HA2", "HA3"]:
-                    match_atom_name = "HA"
-                else:
-                    match_atom_name = atom_name
+                # Normalize all H variants like 1HA/2HA/HA2/HA3 to HA to match model output
+#                key = (res_seq, normalized_atom_name)
+                # Normalize: 1HA, 2HA → HA
+                norm_atom_name = re.sub(r"\d", "", atom_name)
 
-                key = (res_seq, match_atom_name)
+                i = assigned_counts[res_seq][norm_atom_name]
+
+                if (
+                    res_seq in shift_lookup and
+                    norm_atom_name in shift_lookup[res_seq] and
+                    i < len(shift_lookup[res_seq][norm_atom_name])
+                ):
+                    cs_value = shift_lookup[res_seq][norm_atom_name][i]
+                    assigned_counts[res_seq][norm_atom_name] += 1
 
                 # Specify precision based on atom type (1 decimal for N, CA, CB, C; 2 decimals for H, HA)
                 # If the atom type is not in the lookup, set cs_str to "  NA  "
-                if key in lookup:
-                    cs_value = lookup[key]
-                    if match_atom_name in ["N", "CA", "CB", "C"]:
+
+                    if norm_atom_name in ["N", "CA", "CB", "C"]:
                         cs_str = f"{cs_value:6.1f}"
-                    elif match_atom_name in ["H", "HA"]:
+                    elif norm_atom_name in ["H", "HA"]:
                         cs_str = f"{cs_value:6.2f}"
                     else:
                         cs_str = f"{cs_value:6.1f}"
@@ -457,7 +470,6 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
                 f_out.write(new_line)
 
             elif line.startswith("ANISOU"):
-                # Skip ANISOU lines
                 continue
 
             else:
