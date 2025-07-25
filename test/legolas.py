@@ -512,6 +512,10 @@ if __name__ == "__main__":
             if args.topology is None:
                 raise ValueError("Topology file is required for trajectory files")
             entry = load_and_validate_file(input_file, topology=args.topology, TRAJECTORY=True)
+        elif file_extension.lower() == '.h5':
+            entry = load_and_validate_file(input_file, TRAJECTORY=True)
+        else:
+            raise ValueError('Inputs are expected to be .pdb*, .nc, or .h5 files.')
 
         # Run LEGOLAS
         entry = entry.to(device)

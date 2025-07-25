@@ -71,6 +71,8 @@ python legolas.py data/A001_1KF3A.pdbH -atype H,C,N
 # Run on molecular dynamics trajectory:
 python legolas.py data/{trajectory_file}.nc -t data/{topology_file}.parm7
 
+# For trajectories, Legolas also supports the HDF5 (.h5) format, with no topology needed.
+
 # Specify output file type ("csv", "parquet", "pdbcs", "all", default=all)
 # pdbcs output file type is only available for PDB inputs (not trajectories)
 python legolas.py data/A001_1KF3A.pdbH -o csv,pdbcs
