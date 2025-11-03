@@ -101,7 +101,7 @@ class EntryPDB:
 
     @staticmethod
     def get_resname_dict():
-        string = """ala arg asn asp cys glu gln gly his ile leu lys met phe pro ser thr trp tyr val hoh dod""".split()
+        string = """ala arg asn asp cys glu gln gly his ile leu lys met phe pro ser thr trp tyr val hoh dod""".split()  # noqa:E501
         otherlist = [item.upper() for item in string]
         name_to_id = {name: j for j, name in enumerate(otherlist)}
         id_to_name = {j: name for name, j in name_to_id.items()}
@@ -149,8 +149,9 @@ class EntryMdtraj(EntryPDB):
 
             atype = re.sub(r"\d", "", atom.name)
             self.atypes.append(atype)
-            # Biopython and mdtraj should both ignore H if H has resname of “WAT” or “HOH”, and should only ignore H but keep O.
-            # This is because for the trained model, the aev can only see the water's O atom, and H got ignored
+            # Biopython and mdtraj should both ignore H if H has resname of “WAT” or
+            # “HOH”, and should only ignore H but keep O. This is because for the
+            # trained model, the aev can only see the water's O atom, and H got ignored
             if (
                 atype == "H" and atom.residue.name == "HOH"
             ):  # or atom.residue.name == "HOH":
@@ -208,8 +209,9 @@ class ChemicalShiftPredictor(torch.nn.Module):
             angular=angular_terms,
             radial=radial_terms,
             num_species=5,
-            strategy="auto",  # selects "cuaev" if CudaAEV extensions are available, pyaev if not
-            neighborlist="cell_list",  # del if too slow #could try use_cuaev_interface=True above
+            # selects "cuaev" if CudaAEV extensions are available, pyaev if not
+            strategy="auto",
+            neighborlist="cell_list",
         )
 
         # Mean and Standard Deviation values for normalizing the output
@@ -278,8 +280,8 @@ class ChemicalShiftPredictor(torch.nn.Module):
 
     def _combine_all_frames(self, cs_all_batches, num_frames, entry):
         # cs_all_batches is a list of dictionary, each dictionary is for one atom type
-        # we need to merge each atom type's dictionary into a single dictionary that have all frames
-        # then we can convert it to a dataframe
+        # we need to merge each atom type's dictionary into a single dictionary that
+        # have all frames then we can convert it to a dataframe
         df_all = []
 
         for atype in interested_atypes:
@@ -439,8 +441,9 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
     """
     Writes a new PDB file with chemical shifts replacing the B-factor column.
     Non-predicted atoms will have 'NA' instead of the B-factor.
-    PDB files use fixed-width columns, so we limit decimal precision to avoid misalignment
-    So, 13C and 15N shifts use only 1 decimal places, while 1H use 2 decimal places
+    PDB files use fixed-width columns, so we limit decimal precision to avoid
+    misalignment So, 13C and 15N shifts use only 1 decimal places, while 1H use 2
+    decimal places
     """
     # Group all chemical shifts per (SEQ_ID, ATOM_TYPE)
     shift_lookup = collections.defaultdict(
@@ -462,7 +465,8 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
                 res_seq = int(line[22:26].strip())
 
                 # Special GLY handling: treat HA2/HA3 like HA
-                # Normalize all H variants like 1HA/2HA/HA2/HA3 to HA to match model output
+                # Normalize all H variants like 1HA/2HA/HA2/HA3 to HA to match model
+                # output
                 #                key = (res_seq, normalized_atom_name)
                 # Normalize: 1HA, 2HA → HA
                 norm_atom_name = re.sub(r"\d", "", atom_name)
@@ -477,8 +481,9 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
                     cs_value = shift_lookup[res_seq][norm_atom_name][i]
                     assigned_counts[res_seq][norm_atom_name] += 1
 
-                    # Specify precision based on atom type (1 decimal for N, CA, CB, C; 2 decimals for H, HA)
-                    # If the atom type is not in the lookup, set cs_str to "  NA  "
+                    # Specify precision based on atom type (1 decimal for N, CA, CB, C;
+                    # 2 decimals for H, HA) If the atom type is not in the lookup, set
+                    # cs_str to "  NA  "
 
                     if norm_atom_name in ["N", "CA", "CB", "C"]:
                         cs_str = f"{cs_value:6.1f}"
@@ -515,7 +520,7 @@ if __name__ == "__main__":
         "--interested_atypes",
         default=["H", "CA", "CB", "C", "N", "HA"],
         type=parse_atypes,
-        help="Interested atom types, the atypes should be separated by comma, for example H,HA",
+        help="Atom types to predict for, separated by comma, for example H,HA",
     )
     parser.add_argument(
         "-o",
