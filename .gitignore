@@ -2,7 +2,6 @@ cpu_env_numpy2.yaml
 *.slurm.sh
 *.out
 *.error
-__pycache__/
 test/data/decoy_dataset/
 test/data/shiftx2_dataset/
 test/data/A001_1KF3A_lessB.pdbH
@@ -11,3 +10,28 @@ test/resave_nmr_weights.py
 test/legolas_weights_false.py
 test/closest200_cs.parquet
 test/closest200_cs.csv
+
+# Python cache and build
+__pycache__/
+*.pyc
+.eggs
+*.egg-info/
+
+# Other cache
+.mypy_cache/
+.pytest_cache/
+.cache/
+
+
+# line profiler
+*.prof
+
+# memory profiler
+mprofile_*
+
+# Vscode
+.vscode
+
+# Vim swap files
+*.swp
+*.swo

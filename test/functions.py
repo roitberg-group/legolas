@@ -2,7 +2,8 @@ import torch
 import torch.utils.data as data
 
 
-# for changing size of AEV, change trainingpath, change input size (840 or 560), change SummaryWriter
+# for changing size of AEV, change trainingpath, change input size (840 or 560), change
+# SummaryWriter
 class NMR(torch.nn.Module):
     def __init__(self, embedding=0):
         super().__init__()
@@ -16,7 +17,6 @@ class NMR(torch.nn.Module):
     def forward(self, x):
         indices = x[:, -1].long()
         x = x[:, :-1]
-#        print("indices", indices)
         embedded_vector = self.layer0(indices)
         x = torch.cat([x, embedded_vector], 1)
         y = self.layer1(x)
@@ -42,8 +42,8 @@ class ShiftsDataset(data.Dataset):
         return one_aev_size
 
 
-# dict of means and standard deviations for each atom type according to residue type derived from the training set.
-# Ensembling (Means from entire trainingset)
+# dict of means and standard deviations for each atom type according to residue type
+# derived from the training set. Ensembling (Means from entire trainingset)
 ens_means = {
     #    1H-N    #
     "H": [

@@ -1,24 +1,26 @@
 import os
-import time
 import collections
 import re
 import math
-import torchani
-import torch
 import argparse
+from pathlib import Path
+from typing import Optional
+
+import torch
 import pandas as pd
 import numpy as np
 import mdtraj as md
-from pathlib import Path
 from Bio.PDB import PDBParser
 from Bio.PDB.Structure import Structure
-from functions import NMR, ens_means, ens_stdevs
-from typing import List, Optional
+
+from torchani.utils import ChemicalSymbolsToInts
 from torchani.aev import AEVComputer, ANIAngular, ANIRadial
+from functions import NMR, ens_means, ens_stdevs
 
 NUM_MODELS = 5
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class EntryPDB:
     """
@@ -43,10 +45,8 @@ class EntryPDB:
         self.seq_id = []
         self.unsupported = False
         self.indices = collections.defaultdict(lambda: [])
-        self.str2int = torchani.utils.ChemicalSymbolsToInts(
-            self.SUPPORTED_SPECIES
-        )
-        #resname_dict = self.get_resname_dict()
+        self.str2int = ChemicalSymbolsToInts(self.SUPPORTED_SPECIES)
+        # resname_dict = self.get_resname_dict()
         resname_dict, id_to_resname = self.get_resname_dict()
         self.id_to_resname = id_to_resname
 
@@ -101,12 +101,12 @@ class EntryPDB:
 
     @staticmethod
     def get_resname_dict():
-        string = '''ala arg asn asp cys glu gln gly his ile leu lys met phe pro ser thr trp tyr val hoh dod'''.split()
+        string = """ala arg asn asp cys glu gln gly his ile leu lys met phe pro ser thr trp tyr val hoh dod""".split()
         otherlist = [item.upper() for item in string]
         name_to_id = {name: j for j, name in enumerate(otherlist)}
         id_to_name = {j: name for name, j in name_to_id.items()}
         return name_to_id, id_to_name
-        #return {name: j for j, name in enumerate(otherlist)}
+        # return {name: j for j, name in enumerate(otherlist)}
 
     def to(self, device):
         """Move tensors to the specified device"""
@@ -118,6 +118,7 @@ class EntryPDB:
         for atype in self.indices:
             self.indices[atype] = self.indices[atype].to(device)
         return self
+
 
 class EntryMdtraj(EntryPDB):
     """
@@ -136,10 +137,8 @@ class EntryMdtraj(EntryPDB):
         self.seq_id = []
         self.unsupported = False
         self.indices = collections.defaultdict(lambda: [])
-        self.str2int = torchani.utils.ChemicalSymbolsToInts(
-            self.SUPPORTED_SPECIES
-        )
-#        resname_dict = self.get_resname_dict()
+        self.str2int = ChemicalSymbolsToInts(self.SUPPORTED_SPECIES)
+        #        resname_dict = self.get_resname_dict()
         resname_dict, id_to_resname = self.get_resname_dict()
         self.id_to_resname = id_to_resname
 
@@ -150,9 +149,11 @@ class EntryMdtraj(EntryPDB):
 
             atype = re.sub(r"\d", "", atom.name)
             self.atypes.append(atype)
-            # Biopython and mdtraj should both ignore H if H has resname of “WAT” or “HOH”, and should only ignore H but keep O. 
+            # Biopython and mdtraj should both ignore H if H has resname of “WAT” or “HOH”, and should only ignore H but keep O.
             # This is because for the trained model, the aev can only see the water's O atom, and H got ignored
-            if atype == "H" and atom.residue.name == "HOH": #or atom.residue.name == "HOH":
+            if (
+                atype == "H" and atom.residue.name == "HOH"
+            ):  # or atom.residue.name == "HOH":
                 continue
             if atype in interested_atypes:
                 self.indices[atype].append(i)
@@ -171,15 +172,18 @@ class EntryMdtraj(EntryPDB):
         self.seq_id = torch.tensor(self.seq_id, dtype=torch.long)
         self.chemical_shifts = torch.tensor(self.chemical_shifts)
         self.coordinates = torch.tensor(self.coordinates, dtype=torch.float32)
-        self.coordinates = torch.transpose(self.coordinates, 0, 1).contiguous() # fix formatting issue
-#        self.coordinates = torch.tensor(trajectory.xyz, dtype=torch.float32)
+        self.coordinates = torch.transpose(
+            self.coordinates, 0, 1
+        ).contiguous()  # fix formatting issue
+        #        self.coordinates = torch.tensor(trajectory.xyz, dtype=torch.float32)
         self.coordinates = self.coordinates * 10  # convert to angstrom
         self.res_idx = torch.tensor(self.res_idx, dtype=torch.long)
         self.species = self.str2int(self.species)
-#        print("coords", self.coordinates.shape)
-#        print("species", self.species.shape)
+        #        print("coords", self.coordinates.shape)
+        #        print("species", self.species.shape)
         for atype in self.indices:
             self.indices[atype] = torch.tensor(self.indices[atype], dtype=torch.long)
+
 
 class ChemicalShiftPredictor(torch.nn.Module):
     """
@@ -204,8 +208,8 @@ class ChemicalShiftPredictor(torch.nn.Module):
             angular=angular_terms,
             radial=radial_terms,
             num_species=5,
-            strategy="auto", #selects "cuaev" if CudaAEV extensions are available, pyaev if not
-            neighborlist='cell_list' #del if too slow #could try use_cuaev_interface=True above
+            strategy="auto",  # selects "cuaev" if CudaAEV extensions are available, pyaev if not
+            neighborlist="cell_list",  # del if too slow #could try use_cuaev_interface=True above
         )
 
         # Mean and Standard Deviation values for normalizing the output
@@ -221,7 +225,9 @@ class ChemicalShiftPredictor(torch.nn.Module):
             for path in paths:
                 state = torch.load(path, map_location="cpu", weights_only=True)
 
-                emb_dim = state["layer0.weight"].shape[1] # set embedding dimension to first layer
+                emb_dim = state["layer0.weight"].shape[
+                    1
+                ]  # set embedding dimension to first layer
                 m = NMR(embedding=emb_dim)
                 m.load_state_dict(state)
                 m.eval()
@@ -281,10 +287,12 @@ class ChemicalShiftPredictor(torch.nn.Module):
                 [batch[atype] for batch in cs_all_batches], dim=0
             )  # [num_frames, num_atoms]
             cs_std_all_frames_atype = torch.cat(
-                [batch[atype+'_std'] for batch in cs_all_batches], dim=0
+                [batch[atype + "_std"] for batch in cs_all_batches], dim=0
             )  # [num_frames, num_atoms]
             res_idx_atype = entry.res_idx.index_select(0, entry.indices[atype])
-            seq_id_atype = torch.tensor(entry.seq_id).index_select(0, entry.indices[atype])
+            seq_id_atype = torch.tensor(entry.seq_id).index_select(
+                0, entry.indices[atype]
+            )
 
             # Adjust for a single frame
             if num_frames == 1:
@@ -294,17 +302,17 @@ class ChemicalShiftPredictor(torch.nn.Module):
                 cs_all_frames_atype = cs_all_frames_atype.transpose(
                     0, 1
                 )  # [num_atoms, num_frames]
-                cs_std_all_frames_atype = cs_std_all_frames_atype.transpose(
-                    0, 1
-                )
+                cs_std_all_frames_atype = cs_std_all_frames_atype.transpose(0, 1)
 
             # Create DataFrame for current atom type and append to df_all
             data = {
                 "ATOM_TYPE": [atype] * len(res_idx_atype),
                 "SEQ_ID": seq_id_atype.flatten().tolist(),
-                "RES_TYPE": [entry.id_to_resname[r.item()] for r in res_idx_atype.flatten()],
+                "RES_TYPE": [
+                    entry.id_to_resname[r.item()] for r in res_idx_atype.flatten()
+                ],
                 "CHEMICAL_SHIFT": cs_all_frames_atype.tolist(),
-                "CHEMICAL_SHIFT_STD": cs_std_all_frames_atype.tolist()
+                "CHEMICAL_SHIFT_STD": cs_std_all_frames_atype.tolist(),
             }
             df_all.append(pd.DataFrame(data))
 
@@ -334,7 +342,7 @@ class ChemicalShiftPredictor(torch.nn.Module):
         num_frames = aevs.shape[0]
 
         for atype in interested_atypes:
-            #print(f"Predicting {atype} chemical shifts")
+            # print(f"Predicting {atype} chemical shifts")
             # todo register indices as buffer
             aevs_atype = aevs.index_select(1, indices[atype])
             res_idx_atype = res_idx.index_select(0, indices[atype])
@@ -357,7 +365,9 @@ class ChemicalShiftPredictor(torch.nn.Module):
             models_avg = torch.stack(models_outputs).mean(0)  # [num_frames * num_atoms]
             models_std = self.denorm_chemical_shifts(
                 torch.stack(models_outputs), atype, res_idx_atype_expanded.flatten()
-            ).std(0) #[num_frames * num_atoms]
+            ).std(
+                0
+            )  # [num_frames * num_atoms]
 
             denormed_cs = self.denorm_chemical_shifts(
                 models_avg, atype, res_idx_atype_expanded.flatten()
@@ -365,7 +375,7 @@ class ChemicalShiftPredictor(torch.nn.Module):
             denormed_cs = denormed_cs.view(num_frames, -1)  # [num_frames, num_atoms]
             models_std = models_std.view(num_frames, -1)  # [num_frames, num_atoms]
             cs_all[atype] = denormed_cs
-            cs_all[atype+'_std'] = models_std
+            cs_all[atype + "_std"] = models_std
         return cs_all
 
     def denorm_chemical_shifts(self, chemical_shift, atype, res_idx_atype):
@@ -378,7 +388,12 @@ class ChemicalShiftPredictor(torch.nn.Module):
         return denormed_cs
 
 
-def load_and_validate_file(filepath: str, topology: Optional[str] = None, PDB: bool = False, TRAJECTORY: bool = False):
+def load_and_validate_file(
+    filepath: str,
+    topology: Optional[str] = None,
+    PDB: bool = False,
+    TRAJECTORY: bool = False,
+):
     """
     Loads and validates the file at the given file path.
 
@@ -412,9 +427,10 @@ def load_and_validate_file(filepath: str, topology: Optional[str] = None, PDB: b
 
     return entry
 
+
 def parse_atypes(value):
     # Split the comma-separated string into a list of atom types
-    atypes = value.split(',')
+    atypes = value.split(",")
     # Return the atom types as a list of lists
     return atypes
 
@@ -427,7 +443,9 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
     So, 13C and 15N shifts use only 1 decimal places, while 1H use 2 decimal places
     """
     # Group all chemical shifts per (SEQ_ID, ATOM_TYPE)
-    shift_lookup = collections.defaultdict(lambda: collections.defaultdict(list))  # shift_lookup[seq_id][atype] = list of shifts
+    shift_lookup = collections.defaultdict(
+        lambda: collections.defaultdict(list)
+    )  # shift_lookup[seq_id][atype] = list of shifts
 
     for _, row in df.iterrows():
         seq_id = row["SEQ_ID"]
@@ -437,7 +455,7 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
     # Track how many of each ATOM_TYPE we've assigned per residue
     assigned_counts = collections.defaultdict(lambda: collections.defaultdict(int))
 
-    with open(input_pdb_path, 'r') as f_in, open(output_pdbcs_path, 'w') as f_out:
+    with open(input_pdb_path, "r") as f_in, open(output_pdbcs_path, "w") as f_out:
         for line in f_in:
             if line.startswith("ATOM"):
                 atom_name = line[12:16].strip()
@@ -445,22 +463,22 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
 
                 # Special GLY handling: treat HA2/HA3 like HA
                 # Normalize all H variants like 1HA/2HA/HA2/HA3 to HA to match model output
-#                key = (res_seq, normalized_atom_name)
+                #                key = (res_seq, normalized_atom_name)
                 # Normalize: 1HA, 2HA → HA
                 norm_atom_name = re.sub(r"\d", "", atom_name)
 
                 i = assigned_counts[res_seq][norm_atom_name]
 
                 if (
-                    res_seq in shift_lookup and
-                    norm_atom_name in shift_lookup[res_seq] and
-                    i < len(shift_lookup[res_seq][norm_atom_name])
+                    res_seq in shift_lookup
+                    and norm_atom_name in shift_lookup[res_seq]
+                    and i < len(shift_lookup[res_seq][norm_atom_name])
                 ):
                     cs_value = shift_lookup[res_seq][norm_atom_name][i]
                     assigned_counts[res_seq][norm_atom_name] += 1
 
-                # Specify precision based on atom type (1 decimal for N, CA, CB, C; 2 decimals for H, HA)
-                # If the atom type is not in the lookup, set cs_str to "  NA  "
+                    # Specify precision based on atom type (1 decimal for N, CA, CB, C; 2 decimals for H, HA)
+                    # If the atom type is not in the lookup, set cs_str to "  NA  "
 
                     if norm_atom_name in ["N", "CA", "CB", "C"]:
                         cs_str = f"{cs_value:6.1f}"
@@ -483,11 +501,29 @@ def write_pdbCS(input_pdb_path, df, output_pdbcs_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_files", nargs='+', help="Path to input file(s), could be a PDB or netcdf trajectory file")
+    parser.add_argument(
+        "input_files",
+        nargs="+",
+        help="Path to input file(s), could be a PDB or netcdf trajectory file",
+    )
     parser.add_argument("-t", "--topology", default=None)
-    parser.add_argument("-b", "--batch_size", default=10, type=int) # you could change the batch size to fit your GPU memory
-    parser.add_argument("-atype", "--interested_atypes", default=["H", "CA", "CB", "C", "N", "HA"], type=parse_atypes, help="Interested atom types, the atypes should be separated by comma, for example H,HA")
-    parser.add_argument("-o", "--output", choices=["csv", "parquet", "pdbcs", "all"], default="all", help="Output file format: csv, parquet, pdbcs, or all (default)")
+    parser.add_argument(
+        "-b", "--batch_size", default=10, type=int
+    )  # you could change the batch size to fit your GPU memory
+    parser.add_argument(
+        "-atype",
+        "--interested_atypes",
+        default=["H", "CA", "CB", "C", "N", "HA"],
+        type=parse_atypes,
+        help="Interested atom types, the atypes should be separated by comma, for example H,HA",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        choices=["csv", "parquet", "pdbcs", "all"],
+        default="all",
+        help="Output file format: csv, parquet, pdbcs, or all (default)",
+    )
     args = parser.parse_args()
     interested_atypes = args.interested_atypes
 
@@ -496,9 +532,9 @@ if __name__ == "__main__":
     model_paths = {}
     for atype in interested_atypes:
         model_paths[atype] = [
-            os.path.join(script_dir, "ens_models", f"ens_model_{i+1}_{atype}.pt") for i in range(NUM_MODELS)
+            os.path.join(script_dir, "ens_models", f"ens_model_{i+1}_{atype}.pt")
+            for i in range(NUM_MODELS)
         ]
-
 
     # Can accept single or multiple files
     for input_file in args.input_files:
@@ -506,12 +542,14 @@ if __name__ == "__main__":
         _, file_extension = os.path.splitext(input_file)
 
         # Determine file type and load accordingly
-        if file_extension.lower().startswith('.pdb'):
+        if file_extension.lower().startswith(".pdb"):
             entry = load_and_validate_file(input_file, PDB=True)
-        elif file_extension.lower() == '.nc':
+        elif file_extension.lower() == ".nc":
             if args.topology is None:
                 raise ValueError("Topology file is required for trajectory files")
-            entry = load_and_validate_file(input_file, topology=args.topology, TRAJECTORY=True)
+            entry = load_and_validate_file(
+                input_file, topology=args.topology, TRAJECTORY=True
+            )
 
         # Run LEGOLAS
         entry = entry.to(device)
@@ -533,8 +571,9 @@ if __name__ == "__main__":
             df.to_parquet(parquet_file, index=False)
             print(f"Saved to {parquet_file}")
 
-        if args.output in ["pdbcs", "all"] and file_extension.lower().startswith('.pdb'):
+        if args.output in ["pdbcs", "all"] and file_extension.lower().startswith(
+            ".pdb"
+        ):
             pdbcs_file = stem + "_cs.pdb"
             write_pdbCS(input_file, df, pdbcs_file)
             print(f"Saved to {pdbcs_file}")
-
