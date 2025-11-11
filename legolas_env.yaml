@@ -33,3 +33,5 @@ dependencies:
   - pandas=2.2.3
   - mdtraj=1.10.1
   - pyarrow=20.0.0
+  - pip:
+    - torchani>=2.7

@@ -211,7 +211,7 @@ class ChemicalShiftPredictor(torch.nn.Module):
             num_species=5,
             # selects "cuaev" if CudaAEV extensions are available, pyaev if not
             strategy="auto",
-            neighborlist="cell_list",
+            neighborlist="adaptive",
         )
 
         # Mean and Standard Deviation values for normalizing the output
