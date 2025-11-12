@@ -1,32 +1,20 @@
 name: legolas
 channels:
   - nodefaults
-  - nvidia/label/cuda-11.8.0
   - nvidia
-  - pytorch
   - conda-forge
 
 dependencies:
-  - python=3.10
-  - pip>=24.0
-  - numpy=1.26.4
-
-  # PyTorch (built against CUDA 11.8)
-  - pytorch=2.5.1
-  - pytorch-cuda=11.8.*
+  - python=3.11
+  - pip
+  - numpy
 
   # ────────────   CUDA 11.8 developer toolkit  ────────────
   # This block is only needed if you want CUDA/cuAEV
-  # To run on CPU only, comment out the following line:
-  - nvidia/label/cuda-11.8.0::cuda-toolkit=11.8.*
-
-  # C/C++ toolchain
-  - gcc_linux-64=11.4.*
-  - gxx_linux-64=11.4.*
-
-  # Build tooling
-  - setuptools>=64
-  - setuptools-scm>=8
+  # If you don't need this, comment out the following lines
+  - nvidia::cuda-toolkit=12.9
+  - gxx_linux-64=12.2
+  - gcc_linux-64=12.2
 
   # Science deps
   - biopython=1.85
@@ -34,4 +22,7 @@ dependencies:
   - mdtraj=1.10.1
   - pyarrow=20.0.0
   - pip:
+    - --index-url https://download.pytorch.org/whl/cu129
+    - --extra-index-url https://pypi.python.org/simple
+    - torch==2.8.*
     - torchani>=2.7
