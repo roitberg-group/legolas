@@ -24,22 +24,21 @@ designed to be run on either CPUs or GPUs.
 2. Set up a conda environment:
 Use the provided legolas_env.yaml file to create the conda environment:
 ```bash
-conda env create -n legolas -f legolas_env.yaml
+# The environment provides, among other dependencies:
+# - torchani
+# - python 3.11
+# - cudatoolkit 12.9
+# - pytorch 2.8
+conda env create -f legolas_env.yaml
 conda activate legolas
 ```
 3. Install the TorchANI 2.0 compiled extensions. LEGOLAS is most efficient when doing
    this but it is not required.
 
 ```bash
-# legolas_env installs torchani, which provides the "ani" cli interface
+# torchani provides the "ani" CLI command
 ani build-extensions
 ```
-
-Versions when installing using conda:
-
-- python 3.10
-- cuda 11.8
-- pytorch 2.5.1
 
 ## Usage
 
@@ -79,7 +78,8 @@ python legolas.py data/A001_1KF3A.pdbH -o csv,pdbcs
 
 ## Contributing
 
-If you find a bug or have some feature request, please feel free to open an issue on GitHub or send us a pull request.
+If you find a bug or have some feature request, please feel free to open an issue on
+GitHub or send us a pull request.
 
 ## License
 
