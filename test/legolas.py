@@ -21,6 +21,10 @@ NUM_MODELS = 5
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Since MDtraj is the one reading the coordinates, we can accept all its supported formats
+# I listed the most typical formats although it may support many more
+MDTRAJ_SUPPORTED_FORMATS = { '.nc', '.xtc', '.dcd' }
+
 
 class EntryPDB:
     """
@@ -547,14 +551,17 @@ if __name__ == "__main__":
         _, file_extension = os.path.splitext(input_file)
 
         # Determine file type and load accordingly
-        if file_extension.lower().startswith(".pdb"):
+        entry = None
+        format = file_extension.lower()
+        if format.startswith(".pdb"):
             entry = load_and_validate_file(input_file, PDB=True)
-        elif file_extension.lower() == ".nc":
+        elif format in MDTRAJ_SUPPORTED_FORMATS:
             if args.topology is None:
                 raise ValueError("Topology file is required for trajectory files")
             entry = load_and_validate_file(
-                input_file, topology=args.topology, TRAJECTORY=True
-            )
+                input_file, topology=args.topology, TRAJECTORY=True)
+        else:
+            raise RuntimeError(f'Not supported file format "{format}"')
 
         # Run LEGOLAS
         entry = entry.to(device)
