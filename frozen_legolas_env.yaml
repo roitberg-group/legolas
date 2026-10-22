@@ -7,6 +7,7 @@ channels:
   - https://conda.anaconda.org/conda-forge
   - conda-forge
 dependencies:
+  - pip
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
   - aws-c-auth=0.9.1=h194c533_5
@@ -192,7 +193,6 @@ dependencies:
   - packaging=25.0=pyh29332c3_1
   - pandas=2.2.3=py311h7db5c69_3
   - pcre2=10.46=h1321c63_0
-  - pip=25.3=pyh8b19718_0
   - prometheus-cpp=1.3.0=ha5d0236_0
   - pthread-stubs=0.4=hb9d3cd8_1002
   - py-cpuinfo=9.0.0=pyhd8ed1ab_1
