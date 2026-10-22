@@ -16,13 +16,12 @@ designed to be run on either CPUs or GPUs.
 
 ## Installation
 
-1. Clone the repository using `--recursive` to include the required submodule:
+1. Clone the repository:
 ```bash
- git clone --recursive https://github.com/roitberg-group/legolas.git
+ git clone https://github.com/roitberg-group/legolas.git
  cd legolas
 ```
-2. Set up a conda environment:
-Use the provided legolas_env.yaml file to create the conda environment:
+2. Set up a conda environment using the provided legolas_env.yaml:
 ```bash
 # The environment provides, among other dependencies:
 # - torchani
@@ -32,8 +31,7 @@ Use the provided legolas_env.yaml file to create the conda environment:
 conda env create -f legolas_env.yaml
 conda activate legolas
 ```
-3. Install the TorchANI 2.0 compiled extensions. LEGOLAS is most efficient when doing
-   this but it is not required.
+3. (optional) Install the TorchANI 2.0 compiled extensions. LEGOLAS is most efficient with them.
 
 ```bash
 # torchani provides the "ani" CLI command
